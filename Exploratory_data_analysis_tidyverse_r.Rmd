@@ -3,11 +3,11 @@ title: "Exploratory Data Analysis in R with Tidyverse"
 author: "Matt Steele"
 date: "`r Sys.Date()`"
 output:
-  pdf_document:
-    toc: yes
   html_document:
     toc: yes
     toc-depth: 2
+  pdf_document:
+    toc: yes
 ---
 
 # Continue Learning with these Resources
@@ -427,7 +427,7 @@ you can use the mutate() function to change observations in a variable as well
 
 summary(coalProd$Mine_Type)
 
-coalProd <- mutate(coalProd, Mine_Type_num = recode_factor(Mine_Type, "Refuse" = 1, "Surface" = 2, "Underground" = 3, .ordered = F))
+coalProd <- mutate(coalProd, Mine_Type_num = recode(Mine_Type, "Refuse" = 1, "Surface" = 2, "Underground" = 3))
 
 head(coalProd$Mine_Type_num, 10)
 
@@ -448,8 +448,9 @@ you can use the mutate() function to recode missing variables
 ```{r recode NA, eval=FALSE}
 
 bigfoot_filter <- bigfoot %>% 
-  mutate(title = ifelse(is.na(title), 999, title)) %>% 
-  filter(title != "999")
+  mutate(moon_phase = ifelse(is.na(moon_phase), 999, moon_phase)) %>%
+  mutate(temperature_high = ifelse(is.na(temperature_high), 999, temperature_high)) %>% 
+  filter(moon_phase != "999", temperature_high != "999")
 
 view(bigfoot_filter)
 
@@ -474,13 +475,19 @@ the function group_by() allows you group a categorical variable and create a new
 
 ```{r group by and summarise, eval=FALSE}
 
-coalProd_total_by_state <- coalProd %>% group_by(Mine_State) %>% summarise(total_production = sum(Production_short_tons))
-
-coalProd_total_by_state
+coalProd_wv_by_county <- coalProd_wv %>% group_by(Mine_County) %>% 
+  summarise(N = n(), 
+            mean = mean(Production_short_tons), 
+            total = sum(Production_short_tons))
 
 write_csv(coalProd_total_by_state, "coalproduction_bystate.csv")
 
+# can also add the arrange 
+
+#coalProd_wv_by_county <- arrange(coalProd_wv_by_county, desc(total))
+
 ```
+
 
 ---
 
@@ -630,4 +637,71 @@ ggsave("coalproduction_wv_bycounty.png", height = 10, width = 10, dpi = 320) # s
 
 ```
 
+---
+
+# Additional Examples - Data Visualization
+
+### Scatter Plot
+
+for comparing two numeric variables
+
+```{r scatter plot, eval=FALSE}
+colnames(bigfoot_filter)
+
+bigfoot.scatter <- ggplot(bigfoot_filter, aes(moon_phase, temperature_high))
+
+bigfoot.scatter + geom_point()
+
+bigfoot.scatter + geom_point() +
+  geom_smooth(method = lm) +
+  facet_grid(cols = vars(classification))
+
+```
+
+
+### Histogram
+
+for seeing the distribution of a variable
+
+```{r historgram, eval=FALSE}
+
+bigfoot_filter
+
+# Let's limit the data frame to that mooon phases over .50 during the summer
+
+bigfoot_waning <- filter(bigfoot_filter, moon_phase > .50 & season == "Summer")
+bigfoot_waning
+
+# Set the plot
+
+bigfoot.hist <- ggplot(bigfoot_waning, aes(temperature_high))
+
+# Set histogram
+
+bigfoot.hist + geom_histogram()
+
+
+# Add additional elements (labs, bins, color)
+
+bigfoot.hist + 
+  geom_histogram(binwidth = 10 , color = "yellow", fill = "skyblue") + 
+  theme_classic() +
+  labs(title = "Distubution of High Temperatures", 
+       caption = "high temperature of bigfoot sightings during a waning moon in summer",
+       x = NULL,
+       y = NULL)
+
+```
+
+# Box Plot
+
+show distributions of numeric data values compared between multiple groups.
+
+```{r box plot, eval=FALSE}
+
+bigfoot.box <-  ggplot(bigfoot_filter, aes(season, temperature_high))
+
+bigfoot.box + geom_boxplot()
+
+```
 
